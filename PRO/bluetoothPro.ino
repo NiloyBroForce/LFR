@@ -1,3 +1,6 @@
+/*PWM PINS 3,5,6,9,10,11
+Built in led is PIN 13
+*/
 #include <L298N.h>
 #include <QTRSensors.h>
 #include <SoftwareSerial.h>
@@ -97,7 +100,7 @@ void motor_drive(int left, int right)
     }
     else
     {
-        motor2.setSpeed(abs(right));
+        motor2.setSpeed(-right);
         motor2.backward();
     }
 
@@ -109,7 +112,7 @@ void motor_drive(int left, int right)
     }
     else
     {
-        motor1.setSpeed(abs(left));
+        motor1.setSpeed(-left);
         motor1.backward();
     }
 }
