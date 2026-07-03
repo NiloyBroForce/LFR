@@ -78,7 +78,7 @@ public:
     {
         qtr.setTypeAnalog();
         qtr.setSensorPins(
-            (const uint8_t[]){A0, A1, A2, A3, A4,A5},
+            (const uint8_t[]){A0, A1, A2, A3, A4, A5},
             SensorCount);
     }
 
@@ -219,24 +219,29 @@ public:
             case 'P':
             case 'p':
                 pid.setKp(value);
+                bluetooth.println(pid.getKp());
                 break;
             case 'I':
             case 'i':
                 pid.setKi(value);
+                bluetooth.println(pid.getKi());
                 break;
             case 'D':
             case 'd':
                 pid.setKd(value);
+                bluetooth.println(pid.getKd());
                 break;
             case 'S':
             case 's':
                 setSpeed(value);
+                bluetooth.println(getSpeed());
                 break;
             default:
                 break;
             }
         }
     }
+   
     void stop()
     {
         driver.stop();

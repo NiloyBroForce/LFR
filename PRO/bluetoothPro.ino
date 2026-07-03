@@ -130,18 +130,26 @@ void checkBluetooth()
     case 'P':
     case 'p':
       Kp = value;
+                bluetooth.println(Kp);
+
       break;
     case 'I':
     case 'i':
       Ki = value;
+                bluetooth.println(Ki);
+
       break;
     case 'D':
     case 'd':
       Kd = value;
+                bluetooth.println(Kd);
+
       break;
     case 'S':
     case 's':
       lfspeed = constrain((int)value, 0, 255);
+                bluetooth.println(lfspeed);
+
       break;
     default:
       break;
