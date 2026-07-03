@@ -1,6 +1,8 @@
 /*PWM PINS 3,5,6,9,10,11
 Built in led is PIN 13
 */
+
+
 #include <L298N.h>
 #include <QTRSensors.h>
 #include <SoftwareSerial.h>
@@ -30,7 +32,7 @@ L298N motor2(PWMB, BIN1, BIN2);
 QTRSensors qtr;
 SoftwareSerial bluetooth(BT_RX, BT_TX);
 
-constexpr uint8_t SensorCount = 5;
+constexpr uint8_t SensorCount = 6;
 uint16_t sensorValues[SensorCount];
 
 // PID Constants (Tune via Bluetooth)
@@ -39,164 +41,174 @@ float Ki = 0.0;
 float Kd = 0.0;
 
 uint16_t position;
-int P, D, I, previousError, error;
+int P = 0, D = 0, I = 0, previousError = 0, error = 0;
 int lsp, rsp;
-int lfspeed = 150; // base speed of motor
+int lfspeed = 150;//base speed of motor
 
 bool onoff = false;
 
-void checkBluetooth()
+void setup()
 {
-    if (bluetooth.available() > 0)
-    {
-        char key = bluetooth.read();
+  // Initialize Bluetooth Serial
+  bluetooth.begin(9600);
 
-        if (key == 'G' || key == 'g')
-        {
-            onoff = true;
-            bluetooth.println("START");
-            return;
-        }
-        else if (key == 'X' || key == 'x')
-        {
-            onoff = false;
-            bluetooth.println("STOPPED");
-            return;
-        }
+  qtr.setTypeAnalog();
+  qtr.setSensorPins((const uint8_t[]){A0, A1, A2, A3, A4,A5}, SensorCount);
 
-        float value = bluetooth.parseFloat();
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH); // LED calibration mode
 
-        switch (key)
-        {
-        case 'P':
-        case 'p':
-            Kp = value;
-            break;
-        case 'I':
-        case 'i':
-            Ki = value;
-            break;
-        case 'D':
-        case 'd':
-            Kd = value;
-            break;
-        case 'S':
-        case 's':
-            lfspeed = constrain((int)value, 0, 255);
-            break;
-        default:
-            break;
-        }
-    }
+  for (uint16_t i = 0; i < 400; i++)
+  {
+    qtr.calibrate();
+  }
+  bluetooth.print("MIN\n");
+  for (uint8_t i = 0; i < SensorCount; i++)
+  {
+    bluetooth.print(qtr.calibrationOn.minimum[i]);
+    bluetooth.print("\t");
+  }
+  bluetooth.println();
+
+  bluetooth.print("MAX\n");
+  for (uint8_t i = 0; i < SensorCount; i++)
+  {
+    bluetooth.print(qtr.calibrationOn.maximum[i]);
+    bluetooth.print("\t");
+  }
+  digitalWrite(LED_BUILTIN, LOW); // calibration finished
+}
+void stopRobot()
+{
+  motor1.stop();
+  motor2.stop();
+
+  I = 0;
+  previousError = 0;
+
+  lsp = 0;
+  rsp = 0;
+
+  bluetooth.println("ROBOT STOPPED + PID RESET");
+}
+void loop()
+{
+  checkBluetooth();
+  if (onoff == true)
+  {
+    robot_control(); // Run normally
+  }
+  else
+  {
+    stopRobot();
+  }
 }
 
-void motor_drive(int left, int right)
+void checkBluetooth()
 {
-    // Right Motor
-    if (right >= 0)
+  if (bluetooth.available() > 0)
+  {
+    char key = bluetooth.read();
+
+    if (key == 'G' || key == 'g')
     {
-        motor2.setSpeed(right);
-        motor2.forward();
+      onoff = true;
+      bluetooth.println("START");
+      return;
     }
-    else
+    else if (key == 'X' || key == 'x')
     {
-        motor2.setSpeed(-right);
-        motor2.backward();
+      onoff = false;
+      bluetooth.println("STOPPED");
+      return;
     }
 
-    // Left Motor
-    if (left >= 0)
+    float value = bluetooth.parseFloat();
+
+    switch (key)
     {
-        motor1.setSpeed(left);
-        motor1.forward();
+    case 'P':
+    case 'p':
+      Kp = value;
+      break;
+    case 'I':
+    case 'i':
+      Ki = value;
+      break;
+    case 'D':
+    case 'd':
+      Kd = value;
+      break;
+    case 'S':
+    case 's':
+      lfspeed = constrain((int)value, 0, 255);
+      break;
+    default:
+      break;
     }
+  }
+}
+
+void robot_control()
+{
+  position = qtr.readLineBlack(sensorValues);
+  error = 2000 - position;
+
+  if (sensorValues[0] >= 980 && sensorValues[1] >= 980 && sensorValues[2] >= 980 && sensorValues[3] >= 980 && sensorValues[4] >= 980)
+  {
+    if (previousError > 0)
+      motor_drive(-150, 150);
     else
-    {
-        motor1.setSpeed(-left);
-        motor1.backward();
-    }
+      motor_drive(150, -150);
+  }
+  else
+  {
+    Linefollow(error);
+  }
 }
 
 void Linefollow(int error)
 {
-    P = error;
-    I = I + error;
-    D = error - previousError;
-    I = constrain(I, -1000, 1000);
+  P = error;
+  I = I + error;
+  D = error - previousError;
+  I = constrain(I, -1000, 1000);
 
-    float PIDvalue = (Kp * P) + (Ki * I) + (Kd * D);
-    previousError = error;
+  float PIDvalue = (Kp * P) + (Ki * I) + (Kd * D);
+  previousError = error;
 
-    lsp = lfspeed - PIDvalue;
-    rsp = lfspeed + PIDvalue;
+  lsp = lfspeed - PIDvalue;
+  rsp = lfspeed + PIDvalue;
 
-    lsp = constrain(lsp, -255, 255);
-    rsp = constrain(rsp, -255, 255);
+  lsp = constrain(lsp, -255, 255);
+  rsp = constrain(rsp, -255, 255);
 
-    motor_drive(lsp, rsp);
-}
-void robot_control()
-{
-    position = qtr.readLineBlack(sensorValues);
-    error = 2000 - position;
-
-    if (sensorValues[0] >= 980 && sensorValues[1] >= 980 && sensorValues[2] >= 980 && sensorValues[3] >= 980 && sensorValues[4] >= 980)
-    {
-        if (previousError > 0)
-            motor_drive(-150, 150);
-        else
-            motor_drive(150, -150);
-    }
-    else
-    {
-        Linefollow(error);
-    }
+  motor_drive(lsp, rsp);
 }
 
-
-void setup()
+void motor_drive(int left, int right)
 {
-    // Initialize Bluetooth Serial
-    bluetooth.begin(9600);
+  // Right Motor
+  if (right >= 0)
+  {
+    motor2.setSpeed(right);
+    motor2.forward();
+  }
+  else
+  {
+    motor2.setSpeed(right);
+    motor2.backward();
+  }
 
-    qtr.setTypeAnalog();
-    qtr.setSensorPins((const uint8_t[]){A0, A1, A2, A3, A4}, SensorCount);
-
-    pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(LED_BUILTIN, HIGH); // LED calibration mode
-
-    for (uint16_t i = 0; i < 400; i++)
-    {
-        qtr.calibrate();
-        checkBluetooth();
-    }
-    bluetooth.print("MIN\n");
-    for (uint8_t i = 0; i < SensorCount; i++)
-    {
-        bluetooth.print(qtr.calibrationOn.minimum[i]);
-        bluetooth.print("\t");
-    }
-    bluetooth.println();
-
-    bluetooth.print("MAX\n");
-    for (uint8_t i = 0; i < SensorCount; i++)
-    {
-        bluetooth.print(qtr.calibrationOn.maximum[i]);
-        bluetooth.print("\t");
-    }
-    digitalWrite(LED_BUILTIN, LOW); // calibration finished
-}
-
-void loop()
-{
-    checkBluetooth();
-    if (onoff == true)
-    {
-        robot_control(); // Run normally
-    }
-    else
-    {
-        motor1.stop(); // Force immediate stop
-        motor2.stop();
-    }
+  // Left Motor
+  if (left >= 0)
+  {
+    motor1.setSpeed(left);
+    motor1.forward();
+  }
+  else
+  {
+    motor1.setSpeed(left);
+    motor1.backward();
+  }
 }

@@ -1,6 +1,7 @@
 /*PWM PINS 3,5,6,9,10,11
 Built in led is PIN 13
 */
+
 #include <L298NX2.h>
 #include <QTRSensors.h>
 #include <SoftwareSerial.h>
@@ -69,7 +70,7 @@ class LineSensor
 {
 private:
     QTRSensors qtr;
-    static constexpr uint8_t SensorCount = 5;
+    static constexpr uint8_t SensorCount = 6;
     uint16_t values[SensorCount];
 
 public:
@@ -77,7 +78,7 @@ public:
     {
         qtr.setTypeAnalog();
         qtr.setSensorPins(
-            (const uint8_t[]){A0, A1, A2, A3, A4},
+            (const uint8_t[]){A0, A1, A2, A3, A4,A5},
             SensorCount);
     }
 
