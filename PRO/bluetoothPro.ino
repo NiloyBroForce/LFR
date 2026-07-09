@@ -45,7 +45,7 @@ int P = 0, D = 0, I = 0, previousError = 0, error = 0;
 int lsp, rsp;
 int lfspeed = 150;//base speed of motor
 
-bool onoff = false;
+bool onoff = true;
 
 void setup();
 void loop();
@@ -168,9 +168,14 @@ void checkBluetooth()
 void robot_control()
 {
   position = qtr.readLineBlack(sensorValues);
-  error = 2000 - position;
+  error = 5000 - position;
 
-  if (sensorValues[0] >= 980 && sensorValues[1] >= 980 && sensorValues[2] >= 980 && sensorValues[3] >= 980 && sensorValues[4] >= 980)
+if (sensorValues[0] >= 980 &&
+    sensorValues[1] >= 980 &&
+    sensorValues[2] >= 980 &&
+    sensorValues[3] >= 980 &&
+    sensorValues[4] >= 980 &&
+    sensorValues[5] >= 980)
   {
     if (previousError > 0)
       motor_drive(-150, 150);

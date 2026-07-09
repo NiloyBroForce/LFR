@@ -58,23 +58,30 @@ void loop()
 void robot_control()
 {
   position = qtr.readLineBlack(sensorValues);
-  error = 2000 - position;
+  error = 2500 - position;
 
-  if (sensorValues[0] >= 980 && sensorValues[1] >= 980 && sensorValues[2] >= 980 && sensorValues[3] >= 980 && sensorValues[4] >= 980)
-  {
+  bool lineDetected = false;
+
+for (uint8_t i = 0; i < SensorCount; i++)
+{
+    if (sensorValues[i] > 500)   // Adjust threshold as needed
+    {
+        lineDetected = true;
+        break;
+    }
+}
+
+if (!lineDetected)
+{
     if (previousError > 0)
-    {
-      motor_drive(-150, 150); // Sharp left turn
-    }
+        motor_drive(-150, 150);
     else
-    {
-      motor_drive(150, -150); // Sharp right turn
-    }
-  }
-  else
-  {
+        motor_drive(150, -150);
+}
+else
+{
     Linefollow(error);
-  }
+}
 }
 
 void Linefollow(int error)
