@@ -17,7 +17,7 @@ L298N motor2(PWMB, BIN1, BIN2);
 
 QTRSensors qtr;
 
-constexpr uint8_t SensorCount = 5;
+constexpr uint8_t SensorCount = 6;
 uint16_t sensorValues[SensorCount];
 
 float Kp = 2.0 / 10.0;
@@ -38,7 +38,7 @@ void motor_drive(int left, int right);
 void setup()
 {
   qtr.setTypeAnalog();
-  qtr.setSensorPins((const uint8_t[]){A0, A1, A2, A3, A4}, SensorCount);
+  qtr.setSensorPins((const uint8_t[]){A0, A1, A2, A3, A4,A5}, SensorCount);
 
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH); // LED calibration mode

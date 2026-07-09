@@ -46,7 +46,7 @@ class LineSensor
 {
 private:
   QTRSensors qtr;
-  static constexpr uint8_t SensorCount = 5;
+  static constexpr uint8_t SensorCount = 6;
   uint16_t values[SensorCount];
 
 public:
@@ -55,7 +55,7 @@ public:
   {
     qtr.setTypeAnalog();
     qtr.setSensorPins(
-        (const uint8_t[]){A0, A1, A2, A3, A4},
+        (const uint8_t[]){A0, A1, A2, A3, A4,A5},
         SensorCount);
   }
 
