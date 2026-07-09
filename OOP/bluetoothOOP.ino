@@ -12,8 +12,7 @@ static constexpr uint8_t BT_TX = 11;
 
 SoftwareSerial bluetooth(BT_RX, BT_TX);
 
-class PIDController
-{
+class PIDController{
 private:
     float kp;
     float ki;
@@ -140,6 +139,32 @@ private:
     bool robotstate = false;
 
     int lastDirection = 1;
+    
+    void handleLostLine()
+    {
+        int left = -baseSpeed * lastDirection;
+        int right = baseSpeed * lastDirection;
+
+        drive(left, right);
+    }
+    void setMotorA(int speed)
+    {
+        speed = constrain(speed, -255, 255);
+        driver.setSpeedA(abs(speed));
+        speed >= 0 ? driver.forwardA() : driver.backwardA();
+    }
+
+    void setMotorB(int speed)
+    {
+        speed = constrain(speed, -255, 255);
+        driver.setSpeedB(abs(speed));
+        speed >= 0 ? driver.forwardB() : driver.backwardB();
+    }
+    void drive(int leftSpeed, int rightSpeed)
+    {
+        setMotorA(constrain(leftSpeed, -255, 255));
+        setMotorB(constrain(rightSpeed, -255, 255));
+    }
 
 public:
     Robot() : pid(0.2, 0.2, 0.2), driver(PWMA, AIN1, AIN2, PWMB, BIN1, BIN2)
@@ -247,32 +272,7 @@ public:
         driver.stop();
     }
 
-private:
-    void handleLostLine()
-    {
-        int left = -baseSpeed * lastDirection;
-        int right = baseSpeed * lastDirection;
 
-        drive(left, right);
-    }
-    void setMotorA(int speed)
-    {
-        speed = constrain(speed, -255, 255);
-        driver.setSpeedA(abs(speed));
-        speed >= 0 ? driver.forwardA() : driver.backwardA();
-    }
-
-    void setMotorB(int speed)
-    {
-        speed = constrain(speed, -255, 255);
-        driver.setSpeedB(abs(speed));
-        speed >= 0 ? driver.forwardB() : driver.backwardB();
-    }
-    void drive(int leftSpeed, int rightSpeed)
-    {
-        setMotorA(constrain(leftSpeed, -255, 255));
-        setMotorB(constrain(rightSpeed, -255, 255));
-    }
 };
 
 Robot robot;

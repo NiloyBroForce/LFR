@@ -29,6 +29,13 @@ int P, D, I, previousError, error;
 int lsp, rsp;
 int lfspeed = 90; // Dropped to 90 for a steady, safe cruising speed
 
+void setup();
+void loop();
+void robot_control();
+uint16_t readLineBlack();
+void Linefollow(int error);
+void motor_drive(int left, int right);
+
 void setup() {
   // Initialize L298N Control Pins
   pinMode(IN1, OUTPUT);

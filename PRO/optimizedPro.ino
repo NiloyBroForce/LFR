@@ -29,6 +29,12 @@ int P, D, I, previousError, error;
 int lsp, rsp;
 int lfspeed = 150;
 
+void setup();
+void loop();
+void robot_control();
+void Linefollow(int error);
+void motor_drive(int left, int right);
+
 void setup()
 {
   qtr.setTypeAnalog();

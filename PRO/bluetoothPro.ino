@@ -47,6 +47,14 @@ int lfspeed = 150;//base speed of motor
 
 bool onoff = false;
 
+void setup();
+void loop();
+void stopRobot();
+void checkBluetooth();
+void robot_control();
+void Linefollow(int error);
+void motor_drive(int left, int right);
+
 void setup()
 {
   // Initialize Bluetooth Serial

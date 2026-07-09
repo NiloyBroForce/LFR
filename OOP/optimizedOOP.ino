@@ -99,7 +99,24 @@ static constexpr uint8_t PWMB = 6; // set arduino pins for motor driver
 static constexpr uint8_t STBY = 8; // set arduino pins for motor driver
 
 L298NX2 driver;
+  void setMotorA(int speed)
+  {
+    speed = constrain(speed, -255, 255);
+    driver.setSpeedA(abs(speed));
+    speed >= 0 ? driver.forwardA() : driver.backwardA();
+  }
 
+  void setMotorB(int speed)
+  {
+    speed = constrain(speed, -255, 255);
+    driver.setSpeedB(abs(speed));
+    speed >= 0 ? driver.forwardB() : driver.backwardB();
+  }
+  void drive(int leftSpeed, int rightSpeed)
+  {
+    setMotorA(constrain(leftSpeed, -255, 255));
+    setMotorB(constrain(rightSpeed, -255, 255));
+  }
 public:
   Robot() : pid(0.2, 0.2, 0.2), driver(PWMA, AIN1, AIN2, PWMB, BIN1, BIN2)
   {
@@ -144,25 +161,7 @@ public:
           baseSpeed + correction);
   }
 
-private:
-  void setMotorA(int speed)
-  {
-    speed = constrain(speed, -255, 255);
-    driver.setSpeedA(abs(speed));
-    speed >= 0 ? driver.forwardA() : driver.backwardA();
-  }
 
-  void setMotorB(int speed)
-  {
-    speed = constrain(speed, -255, 255);
-    driver.setSpeedB(abs(speed));
-    speed >= 0 ? driver.forwardB() : driver.backwardB();
-  }
-  void drive(int leftSpeed, int rightSpeed)
-  {
-    setMotorA(constrain(leftSpeed, -255, 255));
-    setMotorB(constrain(rightSpeed, -255, 255));
-  }
 };
 
 Robot robot;
