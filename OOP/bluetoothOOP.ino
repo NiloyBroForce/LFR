@@ -40,7 +40,7 @@ public:
     float getKi() const { return ki; }
     float getKd() const { return kd; }
 
-    PIDController(float p = 0.2, float i = 0.2, float d = 0.2)
+    PIDController(float p = 0.2, float i = 0.0, float d = 0.8)
         : kp(p), ki(i), kd(d)
     {
     }
@@ -59,7 +59,7 @@ public:
         return kp * P + ki * integral + kd * D;
     }
 
-    int lastError()
+    int getLastError()
     {
         return previousError;
     }
@@ -107,14 +107,28 @@ public:
         return qtr.readLineBlack(values);
     }
 
-    bool allBlack()
+     bool noLine()
     {
-        for (int i = 0; i < SensorCount; i++)
-            if (values[i] < 980)
+        for(int i=0;i<SensorCount;i++)
+        {
+            if(values[i] > 500)
                 return false;
+        }
 
         return true;
     }
+    bool sharpLeft()
+{
+    return values[0] > sharpTurnThreshold ||
+           values[1] > sharpTurnThreshold;
+}
+
+
+bool sharpRight()
+{
+    return values[4] > sharpTurnThreshold ||
+           values[5] > sharpTurnThreshold;
+}
 };
 
 class Robot
@@ -125,6 +139,10 @@ private:
     PIDController pid;
 
     int baseSpeed = 150;
+static constexpr int recoveryMinSpeed = 80;
+static constexpr int recoveryMaxSpeed = 220;
+
+static constexpr int sharpTurnThreshold = 700;
 
     static constexpr uint8_t AIN1 = 2; // set arduino pins for motor driver
     static constexpr uint8_t AIN2 = 3; // set arduino pins for motor driver
@@ -136,17 +154,33 @@ private:
 
     L298NX2 driver;
 
-    bool robotstate = false;
+    bool robotstate = true;
 
     int lastDirection = 1;
     
-    void handleLostLine()
-    {
-        int left = -baseSpeed * lastDirection;
-        int right = baseSpeed * lastDirection;
+   void handleLostLine()
+{
+    // Bigger last error means we were farther from the line
+    int recoverySpeed = map(
+        abs(pid.lastError()),
+        0,
+        2500,
+        recoveryMinSpeed,
+        recoveryMaxSpeed
+    );
 
-        drive(left, right);
-    }
+    recoverySpeed = constrain(
+        recoverySpeed,
+        recoveryMinSpeed,
+        recoveryMaxSpeed
+    );
+
+
+    drive(
+        -recoverySpeed * lastDirection,
+         recoverySpeed * lastDirection
+    );
+}
     void setMotorA(int speed)
     {
         speed = constrain(speed, -255, 255);
@@ -167,7 +201,7 @@ private:
     }
 
 public:
-    Robot() : pid(0.2, 0.2, 0.2), driver(PWMA, AIN1, AIN2, PWMB, BIN1, BIN2)
+    Robot() : pid(0.2, 0.0, 0.8), driver(PWMA, AIN1, AIN2, PWMB, BIN1, BIN2)
     {
     }
     void setSpeed(int v)
@@ -200,22 +234,59 @@ public:
 
     void update()
     {
-        int position = sensor.read();
+         uint16_t position =
+        sensor.read();
 
-        int error = 2000 - position;
 
-        if (sensor.allBlack())
+        // 6 sensor center
+        int error =
+        2500 - position;
+
+        if (sensor.noLine())
         {
             handleLostLine();
             return;
         }
 
-        int correction = constrain(pid.update(error), -255, 255);
+        int correction =
+    constrain(pid.update(error),
+              -255,
+              255);
 
-        lastDirection = (error >= 0) ? 1 : -1;
 
-        drive(baseSpeed - correction,
-              baseSpeed + correction);
+lastDirection =
+    (error >= 0) ? 1 : -1;
+
+
+int speed = calculateSpeed(error);
+
+
+drive(
+    speed - correction,
+    speed + correction
+);
+int calculateSpeed(int error)
+{
+    int speed = baseSpeed;
+
+
+    // Strong error means sharp corner
+    if(abs(error) > 1200)
+    {
+        speed *= 0.5;
+    }
+
+
+    // Outer sensors detect incoming corner
+    if(sensor.sharpLeft() ||
+       sensor.sharpRight())
+    {
+        speed *= 0.6;
+    }
+
+
+    return max(speed,80);
+}
     }
 
     void checkBluetooth()
