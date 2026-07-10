@@ -1,12 +1,12 @@
 
-
+#include <Arduino.h>
 #include <L298NX2.h>
 #include <QTRSensors.h>
 #include <EEPROM.h>
 
-static constexpr uint8_t SENSOR_COUNT      = 6;
+static constexpr uint8_t SENSOR_COUNT = 6;
 static constexpr uint8_t SENSOR_PINS[SENSOR_COUNT] = {A0, A1, A2, A3, A4, A5};
-static constexpr uint8_t EMITTER_PIN        = 8;      // set to QTR_NO_EMITTER_PIN if unused
+// static constexpr uint8_t EMITTER_PIN = 8; // set to QTR_NO_EMITTER_PIN if unused
 
 static constexpr uint8_t AIN1 = 2;
 static constexpr uint8_t AIN2 = 3;
@@ -15,9 +15,9 @@ static constexpr uint8_t BIN2 = 7;
 static constexpr uint8_t PWMA = 5;
 static constexpr uint8_t PWMB = 6;
 
-static constexpr uint8_t CALIBRATE_BUTTON  = 9;   // optional: hold LOW at boot to force fresh calibration
-static constexpr int     EEPROM_MAGIC_ADDR = 0;
-static constexpr uint8_t EEPROM_MAGIC_VAL  = 0xA5;
+static constexpr uint8_t CALIBRATE_BUTTON = 9; // optional: hold LOW at boot to force fresh calibration
+static constexpr int EEPROM_MAGIC_ADDR = 0;
+static constexpr uint8_t EEPROM_MAGIC_VAL = 0xA5;
 
 // ===================================================================
 //  TUNING CONSTANTS  (start here, adjust after test runs)
@@ -26,13 +26,13 @@ static constexpr uint8_t EEPROM_MAGIC_VAL  = 0xA5;
 static constexpr float KP = 0.045f;
 static constexpr float KI = 0.0006f;
 static constexpr float KD = 0.55f;
-static constexpr float D_FILTER_ALPHA = 0.6f;   // 0..1, higher = trust new sample more
+static constexpr float D_FILTER_ALPHA = 0.6f; // 0..1, higher = trust new sample more
 
 // Speed profile
-static constexpr int SPEED_MAX      = 220;   // top speed on straights
-static constexpr int SPEED_MIN      = 90;    // floor speed in hard corners
-static constexpr int SPEED_SEARCH   = 110;   // pivot speed while searching for line
-static constexpr int SPEED_RAMP_STEP = 4;    // max change in speed per loop (acceleration limiter)
+static constexpr int SPEED_MAX = 220;     // top speed on straights
+static constexpr int SPEED_MIN = 90;      // floor speed in hard corners
+static constexpr int SPEED_SEARCH = 110;  // pivot speed while searching for line
+static constexpr int SPEED_RAMP_STEP = 4; // max change in speed per loop (acceleration limiter)
 
 // Error thresholds (raw error is centerVal - position, centerVal = (SENSOR_COUNT-1)*1000/2)
 static constexpr int ERROR_CORNER_1 = 800;   // mild turn -> start shedding speed
@@ -40,7 +40,7 @@ static constexpr int ERROR_CORNER_2 = 1500;  // hard turn -> drop to near SPEED_
 static constexpr int SENSOR_SATURATED = 900; // 0-1000 scale, "fully on black" threshold on an outer sensor
 
 // Line-loss / gap handling (spec explicitly allows gaps in the line)
-static constexpr unsigned long GAP_GRACE_MS   = 150;  // coast straight this long before searching
+static constexpr unsigned long GAP_GRACE_MS = 150;       // coast straight this long before searching
 static constexpr unsigned long SEARCH_TIMEOUT_MS = 2500; // safety stop if line never found again
 
 // Sharp turn confirmation - avoid false triggers from noise
@@ -50,10 +50,10 @@ static constexpr uint8_t SHARP_TURN_CONFIRM_COUNT = 3;
 // over the line at boot. Increase these if a sensor never reaches a
 // solid black/white extreme during calibration (check with the
 // debug print in Robot::calibrateInPlace).
-static constexpr int CALIBRATION_PIVOT_SPEED   = 110; // motor speed while rocking
+static constexpr int CALIBRATION_PIVOT_SPEED = 110;   // motor speed while rocking
 static constexpr int CALIBRATION_SWEEP_SAMPLES = 40;  // samples per half-rock (edge to center)
 static constexpr int CALIBRATION_CROSS_SAMPLES = 80;  // samples for the full-width crossing
-static constexpr int CALIBRATION_ROUNDS        = 4;   // how many times to repeat the rock
+static constexpr int CALIBRATION_ROUNDS = 4;          // how many times to repeat the rock
 static constexpr int CALIBRATION_SAMPLE_DELAY_MS = 5; // delay between samples (also sets rock speed)
 
 // ===================================================================
@@ -84,7 +84,8 @@ public:
     {
         unsigned long now = micros();
         float dt = firstRun ? 0.01f : (now - lastTimeUs) / 1e6f;
-        if (dt <= 0) dt = 0.001f;
+        if (dt <= 0)
+            dt = 0.001f;
         lastTimeUs = now;
         firstRun = false;
 
@@ -102,9 +103,7 @@ public:
     }
 };
 
-// ===================================================================
-//  LINE SENSOR WRAPPER
-// ===================================================================
+
 class LineSensor
 {
 private:
@@ -117,9 +116,10 @@ public:
     {
         qtr.setTypeAnalog();
         qtr.setSensorPins((const uint8_t[]){SENSOR_PINS[0], SENSOR_PINS[1], SENSOR_PINS[2],
-                                             SENSOR_PINS[3], SENSOR_PINS[4], SENSOR_PINS[5]}, SENSOR_COUNT);
-        if (EMITTER_PIN != QTR_NO_EMITTER_PIN)
-            qtr.setEmitterPin(EMITTER_PIN);
+                                            SENSOR_PINS[3], SENSOR_PINS[4], SENSOR_PINS[5]},
+                          SENSOR_COUNT);
+        // if (EMITTER_PIN != QTR_NO_EMITTER_PIN)
+        // qtr.setEmitterPin(EMITTER_PIN);
     }
 
     // Take one calibration sample (call repeatedly while physically
@@ -135,8 +135,10 @@ public:
         for (uint8_t i = 0; i < SENSOR_COUNT; i++)
         {
             Serial.print(i);
-            Serial.print(F(": min=")); Serial.print(qtr.calibrationOn.minimum[i]);
-            Serial.print(F(" max=")); Serial.println(qtr.calibrationOn.maximum[i]);
+            Serial.print(F(": min="));
+            Serial.print(qtr.calibrationOn.minimum[i]);
+            Serial.print(F(" max="));
+            Serial.println(qtr.calibrationOn.maximum[i]);
         }
     }
 
@@ -146,23 +148,28 @@ public:
         EEPROM.update(addr++, EEPROM_MAGIC_VAL);
         for (uint8_t i = 0; i < SENSOR_COUNT; i++)
         {
-            EEPROM.put(addr, qtr.calibrationOn.minimum[i]); addr += sizeof(uint16_t);
-            EEPROM.put(addr, qtr.calibrationOn.maximum[i]); addr += sizeof(uint16_t);
+            EEPROM.put(addr, qtr.calibrationOn.minimum[i]);
+            addr += sizeof(uint16_t);
+            EEPROM.put(addr, qtr.calibrationOn.maximum[i]);
+            addr += sizeof(uint16_t);
         }
     }
 
     bool loadCalibrationFromEEPROM()
     {
         int addr = EEPROM_MAGIC_ADDR;
-        if (EEPROM.read(addr) != EEPROM_MAGIC_VAL) return false;
+        if (EEPROM.read(addr) != EEPROM_MAGIC_VAL)
+            return false;
         addr++;
 
         qtr.calibrationOn.initialized = true;
         static uint16_t mins[SENSOR_COUNT], maxs[SENSOR_COUNT];
         for (uint8_t i = 0; i < SENSOR_COUNT; i++)
         {
-            EEPROM.get(addr, mins[i]); addr += sizeof(uint16_t);
-            EEPROM.get(addr, maxs[i]); addr += sizeof(uint16_t);
+            EEPROM.get(addr, mins[i]);
+            addr += sizeof(uint16_t);
+            EEPROM.get(addr, maxs[i]);
+            addr += sizeof(uint16_t);
         }
         qtr.calibrationOn.minimum = mins;
         qtr.calibrationOn.maximum = maxs;
@@ -183,18 +190,20 @@ public:
     bool noLine()
     {
         for (uint8_t i = 0; i < SENSOR_COUNT; i++)
-            if (values[i] > 200) return false;
+            if (values[i] > 200)
+                return false;
         return true;
     }
 
     // Outer sensor saturation = strong signal of a sharp corner / right angle
-    bool outerLeftSaturated()  { return values[0] > SENSOR_SATURATED; }
+    bool outerLeftSaturated() { return values[0] > SENSOR_SATURATED; }
     bool outerRightSaturated() { return values[SENSOR_COUNT - 1] > SENSOR_SATURATED; }
 
     int strength()
     {
         int total = 0;
-        for (uint8_t i = 0; i < SENSOR_COUNT; i++) total += values[i];
+        for (uint8_t i = 0; i < SENSOR_COUNT; i++)
+            total += values[i];
         return total;
     }
 };
@@ -202,7 +211,13 @@ public:
 // ===================================================================
 //  ROBOT
 // ===================================================================
-enum RobotState { FOLLOWING, GAP, SEARCHING, SHARP_TURN };
+enum RobotState
+{
+    FOLLOWING,
+    GAP,
+    SEARCHING,
+    SHARP_TURN
+};
 
 class Robot
 {
@@ -212,8 +227,8 @@ private:
     L298NX2 driver;
 
     RobotState state = FOLLOWING;
-    int lastError = 0;             // sign tells us which side the line was last on
-    int currentSpeed = SPEED_MIN;  // ramped speed, avoids sudden jerks
+    int lastError = 0;            // sign tells us which side the line was last on
+    int currentSpeed = SPEED_MIN; // ramped speed, avoids sudden jerks
     unsigned long lineLostAt = 0;
     unsigned long searchStartedAt = 0;
     uint8_t sharpTurnCounter = 0;
@@ -222,14 +237,20 @@ private:
     {
         speed = constrain(speed, -255, 255);
         driver.setSpeedA(abs(speed));
-        if (speed >= 0) driver.forwardA(); else driver.backwardA();
+        if (speed >= 0)
+            driver.forwardA();
+        else
+            driver.backwardA();
     }
 
     void setMotorB(int speed)
     {
         speed = constrain(speed, -255, 255);
         driver.setSpeedB(abs(speed));
-        if (speed >= 0) driver.forwardB(); else driver.backwardB();
+        if (speed >= 0)
+            driver.forwardB();
+        else
+            driver.backwardB();
     }
 
     void drive(int left, int right)
@@ -271,10 +292,10 @@ private:
     }
 
 public:
-    Robot() :
-        pid(KP, KI, KD),
-        driver(PWMA, AIN1, AIN2, PWMB, BIN1, BIN2)
-    {}
+    Robot() : pid(KP, KI, KD),
+              driver(PWMA, AIN1, AIN2, PWMB, BIN1, BIN2)
+    {
+    }
 
     void begin()
     {
@@ -291,8 +312,17 @@ public:
             // the physical sweep (saves time between competition runs).
             for (int i = 0; i < 2; i++)
             {
-                digitalWrite(LED_BUILTIN, HIGH); delay(150);
-                digitalWrite(LED_BUILTIN, LOW);  delay(150);
+                digitalWrite(LED_BUILTIN, HIGH);
+                unsigned long start = millis();
+                while (millis() - start < 150)
+                {
+                }
+
+                digitalWrite(LED_BUILTIN, LOW);
+                start = millis();
+                while (millis() - start < 150)
+                {
+                }
             }
         }
         else
@@ -309,22 +339,38 @@ public:
         digitalWrite(LED_BUILTIN, HIGH);
         for (int sweep = 0; sweep < CALIBRATION_ROUNDS; sweep++)
         {
+            unsigned long start = millis();
             drive(-CALIBRATION_PIVOT_SPEED, CALIBRATION_PIVOT_SPEED);
             for (int j = 0; j < CALIBRATION_SWEEP_SAMPLES; j++)
-            { sensor.calibrateSample(); delay(CALIBRATION_SAMPLE_DELAY_MS); }
+            {
+                sensor.calibrateSample();
+                while (millis() - start < CALIBRATION_SAMPLE_DELAY_MS)
+                {
+                }
+            }
 
             drive(CALIBRATION_PIVOT_SPEED, -CALIBRATION_PIVOT_SPEED);
             for (int j = 0; j < CALIBRATION_CROSS_SAMPLES; j++)
-            { sensor.calibrateSample(); delay(CALIBRATION_SAMPLE_DELAY_MS); }
+            {
+                sensor.calibrateSample();
+                while (millis() - start < CALIBRATION_SAMPLE_DELAY_MS)
+                {
+                }
+            }
 
             drive(-CALIBRATION_PIVOT_SPEED, CALIBRATION_PIVOT_SPEED);
             for (int j = 0; j < CALIBRATION_SWEEP_SAMPLES; j++)
-            { sensor.calibrateSample(); delay(CALIBRATION_SAMPLE_DELAY_MS); }
+            {
+                sensor.calibrateSample();
+                while (millis() - start < CALIBRATION_SAMPLE_DELAY_MS)
+                {
+                }
+            }
         }
         stopMotors();
         sensor.saveCalibrationToEEPROM();
-        sensor.printCalibrationDebug();   // check Serial Monitor: widen sweep if any sensor's
-                                          // min/max range looks too narrow (e.g. under ~300)
+        sensor.printCalibrationDebug(); // check Serial Monitor: widen sweep if any sensor's
+                                        // min/max range looks too narrow (e.g. under ~300)
         digitalWrite(LED_BUILTIN, LOW);
     }
 
@@ -333,9 +379,9 @@ public:
         sensor.read();
         int error = sensor.error();
 
-        bool sharpLeft  = sensor.outerLeftSaturated();
+        bool sharpLeft = sensor.outerLeftSaturated();
         bool sharpRight = sensor.outerRightSaturated();
-        bool lost       = sensor.noLine();
+        bool lost = sensor.noLine();
 
         // ---- State transitions -----------------------------------
         if (!lost)
@@ -371,49 +417,49 @@ public:
         // ---- Behavior per state ----------------------------------
         switch (state)
         {
-            case FOLLOWING:
-            {
-                int target = calculateTargetSpeed(error);
-                rampSpeedTowards(target);
+        case FOLLOWING:
+        {
+            int target = calculateTargetSpeed(error);
+            rampSpeedTowards(target);
 
-                float correction = pid.update((float)error);
-                drive(currentSpeed - (int)correction,
-                      currentSpeed + (int)correction);
-                break;
-            }
+            float correction = pid.update((float)error);
+            drive(currentSpeed - (int)correction,
+                  currentSpeed + (int)correction);
+            break;
+        }
 
-            case SHARP_TURN:
-            {
-                // Confirmed hard corner (45 deg / 150 deg bends, right
-                // angles): controlled pivot toward the side with signal,
-                // slower than a full spin so we don't overshoot the
-                // narrow 3cm line on exit.
-                rampSpeedTowards(SPEED_MIN);
-                if (error > 0)
-                    drive(-currentSpeed / 2, currentSpeed);
-                else
-                    drive(currentSpeed, -currentSpeed / 2);
-                break;
-            }
+        case SHARP_TURN:
+        {
+            // Confirmed hard corner (45 deg / 150 deg bends, right
+            // angles): controlled pivot toward the side with signal,
+            // slower than a full spin so we don't overshoot the
+            // narrow 3cm line on exit.
+            rampSpeedTowards(SPEED_MIN);
+            if (error > 0)
+                drive(-currentSpeed / 2, currentSpeed);
+            else
+                drive(currentSpeed, -currentSpeed / 2);
+            break;
+        }
 
-            case GAP:
-            {
-                // Line spec allows gaps - coast straight on the last
-                // known good speed/heading rather than reacting to
-                // sensor noise.
-                drive(currentSpeed, currentSpeed);
-                break;
-            }
+        case GAP:
+        {
+            // Line spec allows gaps - coast straight on the last
+            // known good speed/heading rather than reacting to
+            // sensor noise.
+            drive(currentSpeed, currentSpeed);
+            break;
+        }
 
-            case SEARCHING:
-            {
-                // Pivot toward whichever side the line was last seen on.
-                if (lastError >= 0)
-                    drive(-SPEED_SEARCH, SPEED_SEARCH);
-                else
-                    drive(SPEED_SEARCH, -SPEED_SEARCH);
-                break;
-            }
+        case SEARCHING:
+        {
+            // Pivot toward whichever side the line was last seen on.
+            if (lastError >= 0)
+                drive(-SPEED_SEARCH, SPEED_SEARCH);
+            else
+                drive(SPEED_SEARCH, -SPEED_SEARCH);
+            break;
+        }
         }
     }
 };
